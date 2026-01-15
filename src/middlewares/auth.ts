@@ -28,18 +28,7 @@ export const authMiddleware = async (
     const token = authHeader.substring(7);
     const decoded = verifyToken(token);
 
-    // Check if user is organizador and get organizador id
-    let organizadorId: number | undefined;
-    if (decoded.tipo === 'organizador') {
-      const organizador = await prisma.organizador.findUnique({
-        where: { usuario_id: decoded.userId },
-      });
-      if (organizador) {
-        organizadorId = organizador.id;
-      }
-    }
-
-    req.user = { ...decoded, organizadorId };
+    req.user = { ...decoded };
     next();
   } catch (error) {
     sendError(res, 'Token inválido', 401, 'INVALID_TOKEN');

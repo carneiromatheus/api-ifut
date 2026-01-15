@@ -12,7 +12,7 @@ export const create = async (campeonatoId: number, timeId: number, userId: numbe
     throw new AppError('Campeonato não encontrado', 404, 'CHAMPIONSHIP_NOT_FOUND');
   }
 
-  if (championship.status !== 'aberto') {
+  if (!championship.inscricoesAbertas) {
     throw new AppError('Campeonato não está aberto para inscrições', 400, 'CHAMPIONSHIP_NOT_OPEN');
   }
 
@@ -30,7 +30,7 @@ export const create = async (campeonatoId: number, timeId: number, userId: numbe
     throw new AppError('Time não encontrado', 404, 'TEAM_NOT_FOUND');
   }
 
-  if (team.criador_id !== userId) {
+  if (team.responsavelId !== userId) {
     throw new AppError('Apenas o criador do time pode inscrevê-lo', 403, 'FORBIDDEN');
   }
 
@@ -42,9 +42,9 @@ export const create = async (campeonatoId: number, timeId: number, userId: numbe
   // Check if team is already inscribed (RN04)
   const existingInscription = await prisma.inscricao.findUnique({
     where: {
-      campeonato_id_time_id: {
-        campeonato_id: campeonatoId,
-        time_id: timeId,
+      campeonatoId_timeId: {
+        campeonatoId: campeonatoId,
+        timeId: timeId,
       },
     },
   });
@@ -56,8 +56,8 @@ export const create = async (campeonatoId: number, timeId: number, userId: numbe
   // Create inscription with status "pendente" (RN08)
   const inscription = await prisma.inscricao.create({
     data: {
-      campeonato_id: campeonatoId,
-      time_id: timeId,
+      campeonatoId: campeonatoId,
+      timeId: timeId,
       status: 'pendente',
     },
     include: {
@@ -87,11 +87,11 @@ export const findByCampeonato = async (
     throw new AppError('Campeonato não encontrado', 404, 'CHAMPIONSHIP_NOT_FOUND');
   }
 
-  if (championship.organizador_id !== organizadorId) {
+  if (championship.organizadorId !== organizadorId) {
     throw new AppError('Apenas o organizador dono pode ver as inscrições', 403, 'FORBIDDEN');
   }
 
-  const where: any = { campeonato_id: campeonatoId };
+  const where: any = { campeonatoId: campeonatoId };
 
   if (status) {
     where.status = status;
@@ -104,14 +104,14 @@ export const findByCampeonato = async (
         select: {
           id: true,
           nome: true,
-          escudo_url: true,
+          escudo: true,
           _count: {
             select: { jogadores: true },
           },
         },
       },
     },
-    orderBy: { data_inscricao: 'desc' },
+    orderBy: { criadoEm: 'desc' },
   });
 
   return inscriptions;
@@ -132,7 +132,7 @@ export const update = async (
     throw new AppError('Inscrição não encontrada', 404, 'INSCRIPTION_NOT_FOUND');
   }
 
-  if (inscription.campeonato.organizador_id !== organizadorId) {
+  if (inscription.campeonato.organizadorId !== organizadorId) {
     throw new AppError('Apenas o organizador dono pode atualizar inscrições', 403, 'FORBIDDEN');
   }
 

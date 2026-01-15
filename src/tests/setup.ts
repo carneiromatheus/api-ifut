@@ -18,7 +18,6 @@ beforeEach(async () => {
   await prisma.campeonato.deleteMany();
   await prisma.jogador.deleteMany();
   await prisma.time.deleteMany();
-  await prisma.organizador.deleteMany();
   await prisma.usuario.deleteMany();
 });
 

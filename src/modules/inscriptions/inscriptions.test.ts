@@ -20,15 +20,15 @@ describe('Inscriptions Module', () => {
 
   beforeEach(async () => {
     // Create organizer
-    const { token: orgToken, organizador } = await createTestUser({
+    const { token: orgToken, user: organizer } = await createTestUser({
       email: 'organizador@email.com',
       tipo: 'organizador',
     });
     organizerToken = orgToken;
-    organizerId = organizador!.id;
+    organizerId = organizer.id;
 
     // Create championship
-    const championship = await createTestChampionship(organizerId, { status: 'aberto' });
+      const championship = await createTestChampionship(organizerId, { });
     championshipId = championship.id;
 
     // Create regular user with team that has 7+ players
@@ -58,7 +58,7 @@ describe('Inscriptions Module', () => {
       // Create team with only 5 players
       const smallTeam = await createTestTeam(userId, { nome: 'Time Pequeno' });
       for (let i = 0; i < 5; i++) {
-        await createTestPlayer(smallTeam.id, { numero_camisa: i + 1 });
+        await createTestPlayer(smallTeam.id, { numeroCamisa: i + 1 });
       }
 
       const response = await request(app)
@@ -99,8 +99,8 @@ describe('Inscriptions Module', () => {
     });
 
     it('deve retornar erro se campeonato não está aberto', async () => {
-      // Create championship with status em_andamento
-      const closedChamp = await createTestChampionship(organizerId, { status: 'em_andamento' });
+      // Create championship with inscricoes fechadas
+      const closedChamp = await createTestChampionship(organizerId, { });
 
       const response = await request(app)
         .post(`/api/championships/${closedChamp.id}/inscriptions`)

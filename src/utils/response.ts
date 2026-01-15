@@ -7,9 +7,14 @@ export const successResponse = (res: Response, data: any, statusCode = 200) => {
   });
 };
 
-export const errorResponse = (res: Response, error: string, statusCode = 400) => {
+export const errorResponse = (res: Response, error: string, statusCode = 400, code?: string) => {
   return res.status(statusCode).json({
     success: false,
-    error
+    error,
+    code
   });
 };
+
+// Aliases for compatibility
+export const sendSuccess = successResponse;
+export const sendError = errorResponse;

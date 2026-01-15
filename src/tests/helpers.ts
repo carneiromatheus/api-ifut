@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import prisma from '../config/database';
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../config/jwt';
-import { TipoUsuario, Posicao, TipoCampeonato, StatusCampeonato, StatusInscricao } from '@prisma/client';
+import { TipoUsuario, TipoCampeonato, StatusInscricao } from '@prisma/client';
 
 export const createTestUser = async (overrides: Partial<{
   nome: string;
@@ -18,17 +18,9 @@ export const createTestUser = async (overrides: Partial<{
       nome: overrides.nome || faker.person.fullName(),
       email: overrides.email || faker.internet.email(),
       senha: hashedSenha,
-      tipo: overrides.tipo || 'comum',
+      tipo: overrides.tipo || 'administrador',
     },
   });
-
-  // If organizador, create organizador record
-  let organizador = null;
-  if (user.tipo === 'organizador') {
-    organizador = await prisma.organizador.create({
-      data: { usuario_id: user.id },
-    });
-  }
 
   const token = generateToken({
     userId: user.id,
@@ -36,41 +28,39 @@ export const createTestUser = async (overrides: Partial<{
     tipo: user.tipo,
   });
 
-  return { user, token, plainPassword: senha, organizador };
+  return { user, token, plainPassword: senha };
 };
 
 export const createTestTeam = async (criadorId: number, overrides: Partial<{
   nome: string;
-  escudo_url: string;
-  ano_fundacao: number;
-  cores: string[];
+  escudo: string;
 }> = {}) => {
   return prisma.time.create({
     data: {
       nome: overrides.nome || faker.company.name() + ' FC',
-      escudo_url: overrides.escudo_url,
-      ano_fundacao: overrides.ano_fundacao || faker.number.int({ min: 1900, max: 2020 }),
-      cores: overrides.cores || [faker.color.human(), faker.color.human()],
-      criador_id: criadorId,
+      escudo: overrides.escudo,
+      cidade: faker.location.city(),
+      responsavelId: criadorId,
     },
   });
 };
 
 export const createTestPlayer = async (timeId: number, overrides: Partial<{
   nome: string;
-  data_nascimento: Date;
-  posicao: Posicao;
-  numero_camisa: number;
-  foto_url: string;
+  dataNascimento: Date;
+  posicao: string;
+  numeroCamisa: number;
+  foto: string;
 }> = {}) => {
   return prisma.jogador.create({
     data: {
       nome: overrides.nome || faker.person.fullName(),
-      data_nascimento: overrides.data_nascimento || faker.date.birthdate({ min: 18, max: 40, mode: 'age' }),
-      posicao: overrides.posicao || faker.helpers.arrayElement(['Goleiro', 'Zagueiro', 'Lateral', 'Volante', 'Meia', 'Atacante'] as Posicao[]),
-      numero_camisa: overrides.numero_camisa || faker.number.int({ min: 1, max: 99 }),
-      foto_url: overrides.foto_url,
-      time_id: timeId,
+      dataNascimento: overrides.dataNascimento || faker.date.birthdate({ min: 18, max: 40, mode: 'age' }),
+      posicao: overrides.posicao || faker.helpers.arrayElement(['Goleiro', 'Zagueiro', 'Lateral', 'Volante', 'Meia', 'Atacante']),
+      numeroCamisa: overrides.numeroCamisa || faker.number.int({ min: 1, max: 99 }),
+      foto: overrides.foto,
+      timeId: timeId,
+      documento: faker.string.numeric(11),
     },
   });
 };
@@ -79,19 +69,18 @@ export const createTestChampionship = async (organizadorId: number, overrides: P
   nome: string;
   descricao: string;
   tipo: TipoCampeonato;
-  data_inicio: Date;
-  data_fim: Date;
-  status: StatusCampeonato;
+  dataInicio: Date;
+  dataFim: Date;
 }> = {}) => {
   return prisma.campeonato.create({
     data: {
       nome: overrides.nome || `Campeonato ${faker.location.city()} ${faker.date.future().getFullYear()}`,
       descricao: overrides.descricao || faker.lorem.paragraph(),
       tipo: overrides.tipo || 'pontos_corridos',
-      data_inicio: overrides.data_inicio || faker.date.future(),
-      data_fim: overrides.data_fim,
-      status: overrides.status || 'aberto',
-      organizador_id: organizadorId,
+      dataInicio: overrides.dataInicio || faker.date.future(),
+      dataFim: overrides.dataFim,
+      inscricoesAbertas: true,
+      organizadorId: organizadorId,
     },
   });
 };
@@ -101,8 +90,8 @@ export const createTestInscription = async (campeonatoId: number, timeId: number
 }> = {}) => {
   return prisma.inscricao.create({
     data: {
-      campeonato_id: campeonatoId,
-      time_id: timeId,
+      campeonatoId: campeonatoId,
+      timeId: timeId,
       status: overrides.status || 'pendente',
     },
   });
@@ -113,7 +102,7 @@ export const createTeamWithPlayers = async (criadorId: number, numPlayers = 7) =
   
   const players = [];
   for (let i = 0; i < numPlayers; i++) {
-    players.push(await createTestPlayer(team.id, { numero_camisa: i + 1 }));
+    players.push(await createTestPlayer(team.id, { numeroCamisa: i + 1 }));
   }
 
   return { team, players };

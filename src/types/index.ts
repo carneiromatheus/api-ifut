@@ -1,6 +1,6 @@
-import { TipoUsuario, Posicao, TipoCampeonato, StatusCampeonato, StatusInscricao, StatusPartida } from '@prisma/client';
+import { TipoUsuario, TipoCampeonato, StatusInscricao, StatusPartida } from '@prisma/client';
 
-export { TipoUsuario, Posicao, TipoCampeonato, StatusCampeonato, StatusInscricao, StatusPartida };
+export { TipoUsuario, TipoCampeonato, StatusInscricao, StatusPartida };
 
 export interface PaginationParams {
   page?: number;

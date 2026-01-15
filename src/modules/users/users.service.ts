@@ -9,9 +9,8 @@ export const getProfile = async (userId: number) => {
       nome: true,
       email: true,
       tipo: true,
-      foto_url: true,
-      created_at: true,
-      updated_at: true,
+      criadoEm: true,
+      atualizadoEm: true,
     },
   });
 
@@ -22,7 +21,7 @@ export const getProfile = async (userId: number) => {
   return user;
 };
 
-export const updateProfile = async (userId: number, data: { nome?: string; foto_url?: string }) => {
+export const updateProfile = async (userId: number, data: { nome?: string }) => {
   const user = await prisma.usuario.update({
     where: { id: userId },
     data,
@@ -31,9 +30,8 @@ export const updateProfile = async (userId: number, data: { nome?: string; foto_
       nome: true,
       email: true,
       tipo: true,
-      foto_url: true,
-      created_at: true,
-      updated_at: true,
+      criadoEm: true,
+      atualizadoEm: true,
     },
   });
 

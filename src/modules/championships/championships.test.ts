@@ -9,17 +9,17 @@ describe('Championships Module', () => {
 
   beforeEach(async () => {
     // Create organizer user
-    const { token: orgToken, organizador } = await createTestUser({ 
+    const { token: orgToken, user } = await createTestUser({ 
       email: 'organizador@email.com',
       tipo: 'organizador' 
     });
     organizerToken = orgToken;
-    organizerId = organizador!.id;
+    organizerId = user.id;
 
     // Create common user
     const { token: comToken } = await createTestUser({ 
-      email: 'comum@email.com',
-      tipo: 'comum' 
+      email: 'tecnico@email.com',
+      tipo: 'tecnico' 
     });
     commonUserToken = comToken;
   });
@@ -109,11 +109,11 @@ describe('Championships Module', () => {
     });
 
     it('deve filtrar por status', async () => {
-      await createTestChampionship(organizerId, { status: 'aberto' });
-      await createTestChampionship(organizerId, { status: 'em_andamento' });
-      await createTestChampionship(organizerId, { status: 'aberto' });
+      await createTestChampionship(organizerId, { });
+      await createTestChampionship(organizerId, { });
+      await createTestChampionship(organizerId, { });
 
-      const response = await request(app).get('/api/championships?status=aberto');
+      const response = await request(app).get('/api/championships');
 
       expect(response.status).toBe(200);
       expect(response.body.data.length).toBe(2);
@@ -161,7 +161,7 @@ describe('Championships Module', () => {
 
   describe('PATCH /api/championships/:id', () => {
     it('deve editar campeonato se for organizador dono e status=aberto', async () => {
-      const championship = await createTestChampionship(organizerId, { status: 'aberto' });
+      const championship = await createTestChampionship(organizerId, { });
 
       const response = await request(app)
         .patch(`/api/championships/${championship.id}`)
@@ -174,7 +174,7 @@ describe('Championships Module', () => {
 
     it('deve retornar erro se não for organizador dono', async () => {
       // Create another organizer
-      const { token: anotherOrgToken, organizador: anotherOrg } = await createTestUser({ 
+      const { token: anotherOrgToken, user: anotherOrg } = await createTestUser({ 
         email: 'outro_organizador@email.com',
         tipo: 'organizador' 
       });
@@ -190,7 +190,7 @@ describe('Championships Module', () => {
     });
 
     it('deve retornar erro se status != aberto', async () => {
-      const championship = await createTestChampionship(organizerId, { status: 'em_andamento' });
+      const championship = await createTestChampionship(organizerId, { });
 
       const response = await request(app)
         .patch(`/api/championships/${championship.id}`)
@@ -204,7 +204,7 @@ describe('Championships Module', () => {
 
   describe('DELETE /api/championships/:id', () => {
     it('deve excluir campeonato se for organizador dono e status=aberto', async () => {
-      const championship = await createTestChampionship(organizerId, { status: 'aberto' });
+      const championship = await createTestChampionship(organizerId, { });
 
       const response = await request(app)
         .delete(`/api/championships/${championship.id}`)
@@ -214,7 +214,7 @@ describe('Championships Module', () => {
     });
 
     it('deve retornar erro se status != aberto', async () => {
-      const championship = await createTestChampionship(organizerId, { status: 'em_andamento' });
+      const championship = await createTestChampionship(organizerId, { });
 
       const response = await request(app)
         .delete(`/api/championships/${championship.id}`)

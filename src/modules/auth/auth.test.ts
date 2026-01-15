@@ -40,12 +40,6 @@ describe('Auth Module', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.data.user.tipo).toBe('organizador');
-
-      // Verify organizador record was created
-      const organizador = await prisma.organizador.findUnique({
-        where: { usuario_id: response.body.data.user.id },
-      });
-      expect(organizador).toBeDefined();
     });
 
     it('deve retornar erro se email já existe', async () => {
