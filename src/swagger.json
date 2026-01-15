@@ -1,0 +1,935 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "iFut API - Sistema de Gestão de Campeonatos de Futebol",
+    "description": "API para gerenciamento de campeonatos de futebol amador. Suporta campeonatos de pontos corridos, mata-mata e formato misto (grupos + mata-mata).",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Servidor de desenvolvimento"
+    }
+  ],
+  "tags": [
+    {"name": "Autenticação", "description": "Endpoints de autenticação e gestão de usuários"},
+    {"name": "Times", "description": "Gerenciamento de times"},
+    {"name": "Jogadores", "description": "Gerenciamento de jogadores"},
+    {"name": "Campeonatos", "description": "Gerenciamento de campeonatos"},
+    {"name": "Inscrições", "description": "Inscrições de times em campeonatos"},
+    {"name": "Partidas", "description": "Gerenciamento de partidas"},
+    {"name": "Resultados", "description": "Registro de resultados das partidas"},
+    {"name": "Classificação", "description": "Tabela de classificação"},
+    {"name": "Estatísticas", "description": "Estatísticas de jogadores e times"},
+    {"name": "Chaveamento", "description": "Chaveamento mata-mata"},
+    {"name": "Grupos", "description": "Fase de grupos (campeonato misto)"}
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Token JWT obtido através do endpoint de login"
+      }
+    },
+    "schemas": {
+      "Usuario": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "nome": {"type": "string"},
+          "email": {"type": "string", "format": "email"},
+          "tipo": {"type": "string", "enum": ["administrador", "organizador", "tecnico"]},
+          "ativo": {"type": "boolean"}
+        }
+      },
+      "Time": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "nome": {"type": "string"},
+          "escudo": {"type": "string", "nullable": true},
+          "cidade": {"type": "string"},
+          "fundadoEm": {"type": "string", "format": "date", "nullable": true},
+          "responsavelId": {"type": "integer"}
+        }
+      },
+      "Jogador": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "nome": {"type": "string"},
+          "apelido": {"type": "string", "nullable": true},
+          "dataNascimento": {"type": "string", "format": "date"},
+          "posicao": {"type": "string"},
+          "numeroCamisa": {"type": "integer"},
+          "documento": {"type": "string"},
+          "timeId": {"type": "integer"},
+          "ativo": {"type": "boolean"}
+        }
+      },
+      "Campeonato": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "nome": {"type": "string"},
+          "descricao": {"type": "string", "nullable": true},
+          "tipo": {"type": "string", "enum": ["pontos_corridos", "mata_mata", "misto"]},
+          "dataInicio": {"type": "string", "format": "date"},
+          "dataFim": {"type": "string", "format": "date", "nullable": true},
+          "limiteTimesMinimo": {"type": "integer", "default": 4},
+          "limiteTimesMaximo": {"type": "integer", "default": 20},
+          "inscricoesAbertas": {"type": "boolean"},
+          "organizadorId": {"type": "integer"}
+        }
+      },
+      "Inscricao": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "campeonatoId": {"type": "integer"},
+          "timeId": {"type": "integer"},
+          "grupoId": {"type": "integer", "nullable": true},
+          "status": {"type": "string", "enum": ["pendente", "aprovada", "rejeitada"]},
+          "motivoRejeicao": {"type": "string", "nullable": true}
+        }
+      },
+      "Partida": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "campeonatoId": {"type": "integer"},
+          "timeCasaId": {"type": "integer"},
+          "timeVisitanteId": {"type": "integer"},
+          "faseId": {"type": "integer", "nullable": true},
+          "grupoId": {"type": "integer", "nullable": true},
+          "rodada": {"type": "integer"},
+          "dataHora": {"type": "string", "format": "date-time"},
+          "local": {"type": "string", "nullable": true},
+          "status": {"type": "string", "enum": ["agendada", "em_andamento", "finalizada", "cancelada"]},
+          "golsTimeCasa": {"type": "integer", "nullable": true},
+          "golsTimeVisitante": {"type": "integer", "nullable": true}
+        }
+      },
+      "Classificacao": {
+        "type": "object",
+        "properties": {
+          "posicao": {"type": "integer"},
+          "timeId": {"type": "integer"},
+          "nomeTime": {"type": "string"},
+          "pontos": {"type": "integer"},
+          "jogos": {"type": "integer"},
+          "vitorias": {"type": "integer"},
+          "empates": {"type": "integer"},
+          "derrotas": {"type": "integer"},
+          "golsPro": {"type": "integer"},
+          "golsContra": {"type": "integer"},
+          "saldoGols": {"type": "integer"}
+        }
+      },
+      "Fase": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "campeonatoId": {"type": "integer"},
+          "nome": {"type": "string"},
+          "ordem": {"type": "integer"}
+        }
+      },
+      "Grupo": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "campeonatoId": {"type": "integer"},
+          "nome": {"type": "string"}
+        }
+      },
+      "Estatistica": {
+        "type": "object",
+        "properties": {
+          "jogadorId": {"type": "integer"},
+          "gols": {"type": "integer"},
+          "assistencias": {"type": "integer"},
+          "cartoesAmarelos": {"type": "integer"},
+          "cartoesVermelhos": {"type": "integer"}
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean", "default": false},
+          "error": {"type": "string"}
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "boolean", "default": true},
+          "message": {"type": "string"},
+          "data": {"type": "object"}
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Registrar novo usuário",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nome", "email", "senha", "tipo"],
+                "properties": {
+                  "nome": {"type": "string", "example": "João Silva"},
+                  "email": {"type": "string", "format": "email", "example": "joao@email.com"},
+                  "senha": {"type": "string", "minLength": 6, "example": "senha123"},
+                  "tipo": {"type": "string", "enum": ["organizador", "tecnico"], "example": "organizador"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuário criado com sucesso",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SuccessResponse"}}}
+          },
+          "400": {"description": "Dados inválidos", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Fazer login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "senha"],
+                "properties": {
+                  "email": {"type": "string", "format": "email", "example": "joao@email.com"},
+                  "senha": {"type": "string", "example": "senha123"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login bem sucedido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": {"type": "string"},
+                        "user": {"$ref": "#/components/schemas/Usuario"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {"description": "Credenciais inválidas", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Autenticação"],
+        "summary": "Obter perfil do usuário logado",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {"description": "Dados do usuário", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Usuario"}}}},
+          "401": {"description": "Não autenticado", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
+        }
+      }
+    },
+    "/teams": {
+      "get": {
+        "tags": ["Times"],
+        "summary": "Listar todos os times",
+        "parameters": [
+          {"name": "page", "in": "query", "schema": {"type": "integer", "default": 1}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 10}}
+        ],
+        "responses": {"200": {"description": "Lista de times"}}
+      },
+      "post": {
+        "tags": ["Times"],
+        "summary": "Criar novo time",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nome", "cidade"],
+                "properties": {
+                  "nome": {"type": "string", "example": "Flamengo"},
+                  "cidade": {"type": "string", "example": "Rio de Janeiro"},
+                  "escudo": {"type": "string"},
+                  "fundadoEm": {"type": "string", "format": "date"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Time criado"},
+          "401": {"description": "Não autenticado"}
+        }
+      }
+    },
+    "/teams/{id}": {
+      "get": {
+        "tags": ["Times"],
+        "summary": "Obter time por ID",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Dados do time"}, "404": {"description": "Time não encontrado"}}
+      },
+      "put": {
+        "tags": ["Times"],
+        "summary": "Atualizar time",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Time"}}}},
+        "responses": {"200": {"description": "Time atualizado"}, "403": {"description": "Sem permissão"}}
+      },
+      "delete": {
+        "tags": ["Times"],
+        "summary": "Remover time",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Time removido"}, "403": {"description": "Sem permissão"}}
+      }
+    },
+    "/teams/{id}/history": {
+      "get": {
+        "tags": ["Estatísticas"],
+        "summary": "Histórico de partidas do time",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 10}},
+          {"name": "offset", "in": "query", "schema": {"type": "integer", "default": 0}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Histórico do time",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "time": {"type": "object"},
+                    "historico": {"type": "array", "items": {"type": "object"}},
+                    "estatisticas": {"type": "object"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/teams/{id}/vs/{id2}": {
+      "get": {
+        "tags": ["Estatísticas"],
+        "summary": "Confronto direto entre dois times",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}, "description": "ID do time 1"},
+          {"name": "id2", "in": "path", "required": true, "schema": {"type": "integer"}, "description": "ID do time 2"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados do confronto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "time1": {"type": "object"},
+                    "time2": {"type": "object"},
+                    "confrontos": {"type": "object"},
+                    "ultimasPartidas": {"type": "array", "items": {"type": "object"}}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/players": {
+      "get": {
+        "tags": ["Jogadores"],
+        "summary": "Listar todos os jogadores",
+        "parameters": [
+          {"name": "timeId", "in": "query", "schema": {"type": "integer"}, "description": "Filtrar por time"}
+        ],
+        "responses": {"200": {"description": "Lista de jogadores"}}
+      },
+      "post": {
+        "tags": ["Jogadores"],
+        "summary": "Criar novo jogador",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nome", "dataNascimento", "posicao", "numeroCamisa", "documento", "timeId"],
+                "properties": {
+                  "nome": {"type": "string"},
+                  "apelido": {"type": "string"},
+                  "dataNascimento": {"type": "string", "format": "date"},
+                  "posicao": {"type": "string"},
+                  "numeroCamisa": {"type": "integer"},
+                  "documento": {"type": "string"},
+                  "timeId": {"type": "integer"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"201": {"description": "Jogador criado"}}
+      }
+    },
+    "/players/{id}": {
+      "get": {
+        "tags": ["Jogadores"],
+        "summary": "Obter jogador por ID",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Dados do jogador"}}
+      },
+      "put": {
+        "tags": ["Jogadores"],
+        "summary": "Atualizar jogador",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Jogador atualizado"}}
+      },
+      "delete": {
+        "tags": ["Jogadores"],
+        "summary": "Remover jogador",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Jogador removido"}}
+      }
+    },
+    "/players/{id}/stats": {
+      "get": {
+        "tags": ["Estatísticas"],
+        "summary": "Estatísticas completas do jogador",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "200": {
+            "description": "Estatísticas do jogador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "jogador": {"type": "object"},
+                    "estatisticasGerais": {
+                      "type": "object",
+                      "properties": {
+                        "totalJogos": {"type": "integer"},
+                        "totalGols": {"type": "integer"},
+                        "totalAssistencias": {"type": "integer"},
+                        "cartoesAmarelos": {"type": "integer"},
+                        "cartoesVermelhos": {"type": "integer"},
+                        "mediaGolsPorJogo": {"type": "number"}
+                      }
+                    },
+                    "porCampeonato": {"type": "array", "items": {"type": "object"}}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/championships": {
+      "get": {
+        "tags": ["Campeonatos"],
+        "summary": "Listar todos os campeonatos",
+        "parameters": [
+          {"name": "tipo", "in": "query", "schema": {"type": "string", "enum": ["pontos_corridos", "mata_mata", "misto"]}},
+          {"name": "inscricoesAbertas", "in": "query", "schema": {"type": "boolean"}}
+        ],
+        "responses": {"200": {"description": "Lista de campeonatos"}}
+      },
+      "post": {
+        "tags": ["Campeonatos"],
+        "summary": "Criar novo campeonato",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nome", "tipo", "dataInicio"],
+                "properties": {
+                  "nome": {"type": "string", "example": "Campeonato Brasileiro 2024"},
+                  "descricao": {"type": "string"},
+                  "tipo": {"type": "string", "enum": ["pontos_corridos", "mata_mata", "misto"], "example": "pontos_corridos"},
+                  "dataInicio": {"type": "string", "format": "date"},
+                  "dataFim": {"type": "string", "format": "date"},
+                  "limiteTimesMinimo": {"type": "integer", "default": 4},
+                  "limiteTimesMaximo": {"type": "integer", "default": 20}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"201": {"description": "Campeonato criado"}}
+      }
+    },
+    "/championships/{id}": {
+      "get": {
+        "tags": ["Campeonatos"],
+        "summary": "Obter campeonato por ID",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Dados do campeonato"}}
+      },
+      "put": {
+        "tags": ["Campeonatos"],
+        "summary": "Atualizar campeonato",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Campeonato atualizado"}}
+      },
+      "delete": {
+        "tags": ["Campeonatos"],
+        "summary": "Remover campeonato",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Campeonato removido"}}
+      }
+    },
+    "/championships/{id}/standings": {
+      "get": {
+        "tags": ["Classificação"],
+        "summary": "Obter classificação do campeonato",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "200": {
+            "description": "Tabela de classificação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "classificacao": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Classificacao"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/championships/{id}/top-scorers": {
+      "get": {
+        "tags": ["Estatísticas"],
+        "summary": "Artilheiros do campeonato",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer", "default": 10}}
+        ],
+        "responses": {"200": {"description": "Lista de artilheiros"}}
+      }
+    },
+    "/championships/{id}/bracket": {
+      "get": {
+        "tags": ["Chaveamento"],
+        "summary": "Obter chaveamento mata-mata",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "200": {
+            "description": "Dados do chaveamento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "campeonato": {"type": "object"},
+                    "fases": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {"type": "integer"},
+                          "nome": {"type": "string"},
+                          "ordem": {"type": "integer"},
+                          "partidas": {"type": "array", "items": {"type": "object"}}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Chaveamento"],
+        "summary": "Criar chaveamento mata-mata",
+        "description": "Cria automaticamente as fases e partidas do chaveamento. Requer que o campeonato seja tipo mata-mata e tenha número de times potência de 2 (4, 8, 16, 32).",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "201": {"description": "Chaveamento criado"},
+          "400": {"description": "Número de times inválido ou campeonato não é mata-mata"},
+          "403": {"description": "Apenas o organizador pode criar o chaveamento"}
+        }
+      }
+    },
+    "/championships/{id}/groups": {
+      "get": {
+        "tags": ["Grupos"],
+        "summary": "Obter grupos do campeonato misto",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "200": {
+            "description": "Dados dos grupos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "campeonato": {"type": "object"},
+                    "grupos": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {"type": "integer"},
+                          "nome": {"type": "string"},
+                          "times": {"type": "array", "items": {"type": "object"}},
+                          "partidas": {"type": "array", "items": {"type": "object"}}
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Grupos"],
+        "summary": "Criar grupos para campeonato misto",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "numGroups": {"type": "integer", "default": 2, "minimum": 2, "maximum": 8, "description": "Número de grupos a criar"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Grupos criados"},
+          "400": {"description": "Campeonato não é misto ou número de times não divisível"}
+        }
+      }
+    },
+    "/championships/{id}/groups/{groupId}/standings": {
+      "get": {
+        "tags": ["Grupos"],
+        "summary": "Classificação de um grupo específico",
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "groupId", "in": "path", "required": true, "schema": {"type": "integer"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "Classificação do grupo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "grupo": {"type": "object"},
+                    "classificacao": {"type": "array", "items": {"$ref": "#/components/schemas/Classificacao"}}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/championships/{id}/knockout-phase": {
+      "post": {
+        "tags": ["Grupos"],
+        "summary": "Criar fase mata-mata a partir dos classificados dos grupos",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "qualifiersPerGroup": {"type": "integer", "default": 2, "description": "Classificados por grupo"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {"description": "Fase mata-mata criada"},
+          "400": {"description": "Fase de grupos não finalizada"}
+        }
+      }
+    },
+    "/registrations": {
+      "get": {
+        "tags": ["Inscrições"],
+        "summary": "Listar inscrições",
+        "parameters": [
+          {"name": "campeonatoId", "in": "query", "schema": {"type": "integer"}},
+          {"name": "timeId", "in": "query", "schema": {"type": "integer"}},
+          {"name": "status", "in": "query", "schema": {"type": "string", "enum": ["pendente", "aprovada", "rejeitada"]}}
+        ],
+        "responses": {"200": {"description": "Lista de inscrições"}}
+      },
+      "post": {
+        "tags": ["Inscrições"],
+        "summary": "Criar inscrição de time em campeonato",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["campeonatoId", "timeId"],
+                "properties": {
+                  "campeonatoId": {"type": "integer"},
+                  "timeId": {"type": "integer"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"201": {"description": "Inscrição criada"}}
+      }
+    },
+    "/registrations/{id}": {
+      "get": {
+        "tags": ["Inscrições"],
+        "summary": "Obter inscrição por ID",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Dados da inscrição"}}
+      },
+      "delete": {
+        "tags": ["Inscrições"],
+        "summary": "Cancelar inscrição",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Inscrição cancelada"}}
+      }
+    },
+    "/registrations/{id}/approve": {
+      "patch": {
+        "tags": ["Inscrições"],
+        "summary": "Aprovar inscrição",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Inscrição aprovada"}}
+      }
+    },
+    "/registrations/{id}/reject": {
+      "patch": {
+        "tags": ["Inscrições"],
+        "summary": "Rejeitar inscrição",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "motivoRejeicao": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"200": {"description": "Inscrição rejeitada"}}
+      }
+    },
+    "/matches": {
+      "get": {
+        "tags": ["Partidas"],
+        "summary": "Listar partidas",
+        "parameters": [
+          {"name": "campeonatoId", "in": "query", "schema": {"type": "integer"}},
+          {"name": "rodada", "in": "query", "schema": {"type": "integer"}},
+          {"name": "status", "in": "query", "schema": {"type": "string"}}
+        ],
+        "responses": {"200": {"description": "Lista de partidas"}}
+      },
+      "post": {
+        "tags": ["Partidas"],
+        "summary": "Criar nova partida",
+        "security": [{"bearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["campeonatoId", "timeCasaId", "timeVisitanteId", "rodada", "dataHora"],
+                "properties": {
+                  "campeonatoId": {"type": "integer"},
+                  "timeCasaId": {"type": "integer"},
+                  "timeVisitanteId": {"type": "integer"},
+                  "rodada": {"type": "integer"},
+                  "dataHora": {"type": "string", "format": "date-time"},
+                  "local": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"201": {"description": "Partida criada"}}
+      }
+    },
+    "/matches/{id}": {
+      "get": {
+        "tags": ["Partidas"],
+        "summary": "Obter partida por ID",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Dados da partida"}}
+      },
+      "put": {
+        "tags": ["Partidas"],
+        "summary": "Atualizar partida",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Partida atualizada"}}
+      },
+      "delete": {
+        "tags": ["Partidas"],
+        "summary": "Remover partida",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Partida removida"}}
+      }
+    },
+    "/matches/{id}/advance": {
+      "post": {
+        "tags": ["Chaveamento"],
+        "summary": "Avançar vencedor para próxima fase",
+        "description": "Após registrar o resultado de uma partida mata-mata, use este endpoint para avançar o vencedor.",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "200": {"description": "Vencedor avançou"},
+          "400": {"description": "Partida não finalizada"}
+        }
+      }
+    },
+    "/results/{matchId}": {
+      "post": {
+        "tags": ["Resultados"],
+        "summary": "Registrar resultado de partida",
+        "description": "Registra o resultado da partida incluindo escalações e estatísticas dos jogadores.",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "matchId", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["golsTimeCasa", "golsTimeVisitante"],
+                "properties": {
+                  "golsTimeCasa": {"type": "integer"},
+                  "golsTimeVisitante": {"type": "integer"},
+                  "escalacaoTimeCasa": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "jogadorId": {"type": "integer"},
+                        "titular": {"type": "boolean", "default": true}
+                      }
+                    }
+                  },
+                  "escalacaoTimeVisitante": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "jogadorId": {"type": "integer"},
+                        "titular": {"type": "boolean", "default": true}
+                      }
+                    }
+                  },
+                  "estatisticas": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "jogadorId": {"type": "integer"},
+                        "gols": {"type": "integer", "default": 0},
+                        "assistencias": {"type": "integer", "default": 0},
+                        "cartoesAmarelos": {"type": "integer", "default": 0, "maximum": 2},
+                        "cartoesVermelhos": {"type": "integer", "default": 0, "maximum": 1}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {"description": "Resultado registrado"},
+          "400": {"description": "Dados inválidos"}
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["Sistema"],
+        "summary": "Health check",
+        "responses": {"200": {"description": "API funcionando"}}
+      }
+    }
+  }
+}

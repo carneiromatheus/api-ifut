@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TipoUsuario {
+  administrador
+  organizador
+  tecnico
+}
+
+enum StatusInscricao {
+  pendente
+  aprovada
+  rejeitada
+}
+
+enum StatusPartida {
+  agendada
+  em_andamento
+  finalizada
+  cancelada
+}
+
+enum TipoCampeonato {
+  pontos_corridos
+  mata_mata
+  misto
+}
+
+model Usuario {
+  id            Int            @id @default(autoincrement())
+  nome          String         @db.VarChar(100)
+  email         String         @unique @db.VarChar(100)
+  senha         String         @db.VarChar(255)
+  tipo          TipoUsuario
+  ativo         Boolean        @default(true)
+  criadoEm      DateTime       @default(now()) @map("criado_em")
+  atualizadoEm  DateTime       @updatedAt @map("atualizado_em")
+
+  times         Time[]
+  campeonatos   Campeonato[]
+  auditoriaLogs AuditoriaLog[]
+
+  @@map("usuarios")
+}
+
+model Time {
+  id              Int       @id @default(autoincrement())
+  nome            String    @db.VarChar(100)
+  escudo          String?   @db.VarChar(255)
+  cidade          String    @db.VarChar(100)
+  fundadoEm       DateTime? @map("fundado_em")
+  responsavelId   Int       @map("responsavel_id")
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+  atualizadoEm    DateTime  @updatedAt @map("atualizado_em")
+
+  responsavel     Usuario     @relation(fields: [responsavelId], references: [id])
+  jogadores       Jogador[]
+  inscricoes      Inscricao[]
+  partidasCasa    Partida[]   @relation("TimeCasa")
+  partidasVisitante Partida[] @relation("TimeVisitante")
+  classificacoes  Classificacao[]
+  escalacoes      Escalacao[]
+
+  @@map("times")
+}
+
+model Jogador {
+  id            Int       @id @default(autoincrement())
+  nome          String    @db.VarChar(100)
+  apelido       String?   @db.VarChar(50)
+  dataNascimento DateTime  @map("data_nascimento")
+  posicao       String    @db.VarChar(30)
+  numeroCamisa  Int       @map("numero_camisa")
+  documento     String    @unique @db.VarChar(14)
+  foto          String?   @db.VarChar(255)
+  timeId        Int       @map("time_id")
+  ativo         Boolean   @default(true)
+  criadoEm      DateTime  @default(now()) @map("criado_em")
+  atualizadoEm  DateTime  @updatedAt @map("atualizado_em")
+
+  time          Time        @relation(fields: [timeId], references: [id])
+  escalacoes    Escalacao[]
+  estatisticas  Estatistica[]
+
+  @@map("jogadores")
+}
+
+model Campeonato {
+  id                Int            @id @default(autoincrement())
+  nome              String         @db.VarChar(100)
+  descricao         String?        @db.Text
+  tipo              TipoCampeonato @default(pontos_corridos)
+  dataInicio        DateTime       @map("data_inicio")
+  dataFim           DateTime?      @map("data_fim")
+  limiteTimesMinimo Int            @default(4) @map("limite_times_minimo")
+  limiteTimesMaximo Int            @default(20) @map("limite_times_maximo")
+  inscricoesAbertas Boolean        @default(true) @map("inscricoes_abertas")
+  organizadorId     Int            @map("organizador_id")
+  criadoEm          DateTime       @default(now()) @map("criado_em")
+  atualizadoEm      DateTime       @updatedAt @map("atualizado_em")
+
+  organizador     Usuario         @relation(fields: [organizadorId], references: [id])
+  inscricoes      Inscricao[]
+  partidas        Partida[]
+  classificacoes  Classificacao[]
+  fases           Fase[]
+  grupos          Grupo[]
+
+  @@map("campeonatos")
+}
+
+model Inscricao {
+  id            Int             @id @default(autoincrement())
+  campeonatoId  Int             @map("campeonato_id")
+  timeId        Int             @map("time_id")
+  grupoId       Int?            @map("grupo_id")
+  status        StatusInscricao @default(pendente)
+  motivoRejeicao String?        @map("motivo_rejeicao") @db.Text
+  criadoEm      DateTime        @default(now()) @map("criado_em")
+  atualizadoEm  DateTime        @updatedAt @map("atualizado_em")
+
+  campeonato    Campeonato @relation(fields: [campeonatoId], references: [id])
+  time          Time       @relation(fields: [timeId], references: [id])
+  grupo         Grupo?     @relation(fields: [grupoId], references: [id])
+
+  @@unique([campeonatoId, timeId])
+  @@map("inscricoes")
+}
+
+model Partida {
+  id              Int           @id @default(autoincrement())
+  campeonatoId    Int           @map("campeonato_id")
+  timeCasaId      Int           @map("time_casa_id")
+  timeVisitanteId Int           @map("time_visitante_id")
+  faseId          Int?          @map("fase_id")
+  grupoId         Int?          @map("grupo_id")
+  rodada          Int
+  dataHora        DateTime      @map("data_hora")
+  local           String?       @db.VarChar(100)
+  status          StatusPartida @default(agendada)
+  golsTimeCasa    Int?          @map("gols_time_casa")
+  golsTimeVisitante Int?        @map("gols_time_visitante")
+  criadoEm        DateTime      @default(now()) @map("criado_em")
+  atualizadoEm    DateTime      @updatedAt @map("atualizado_em")
+
+  campeonato      Campeonato    @relation(fields: [campeonatoId], references: [id])
+  timeCasa        Time          @relation("TimeCasa", fields: [timeCasaId], references: [id])
+  timeVisitante   Time          @relation("TimeVisitante", fields: [timeVisitanteId], references: [id])
+  fase            Fase?         @relation(fields: [faseId], references: [id])
+  grupo           Grupo?        @relation(fields: [grupoId], references: [id])
+  escalacoes      Escalacao[]
+  estatisticas    Estatistica[]
+
+  @@map("partidas")
+}
+
+model Fase {
+  id            Int       @id @default(autoincrement())
+  campeonatoId  Int       @map("campeonato_id")
+  nome          String    @db.VarChar(50)
+  ordem         Int
+  criadoEm      DateTime  @default(now()) @map("criado_em")
+  atualizadoEm  DateTime  @updatedAt @map("atualizado_em")
+
+  campeonato    Campeonato @relation(fields: [campeonatoId], references: [id])
+  partidas      Partida[]
+
+  @@map("fases")
+}
+
+model Grupo {
+  id            Int       @id @default(autoincrement())
+  campeonatoId  Int       @map("campeonato_id")
+  nome          String    @db.VarChar(50)
+  criadoEm      DateTime  @default(now()) @map("criado_em")
+  atualizadoEm  DateTime  @updatedAt @map("atualizado_em")
+
+  campeonato    Campeonato  @relation(fields: [campeonatoId], references: [id])
+  inscricoes    Inscricao[]
+  partidas      Partida[]
+
+  @@map("grupos")
+}
+
+model Escalacao {
+  id        Int      @id @default(autoincrement())
+  partidaId Int      @map("partida_id")
+  jogadorId Int      @map("jogador_id")
+  timeId    Int      @map("time_id")
+  titular   Boolean  @default(true)
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  partida   Partida  @relation(fields: [partidaId], references: [id])
+  jogador   Jogador  @relation(fields: [jogadorId], references: [id])
+  time      Time     @relation(fields: [timeId], references: [id])
+
+  @@unique([partidaId, jogadorId])
+  @@map("escalacoes")
+}
+
+model Estatistica {
+  id                Int      @id @default(autoincrement())
+  partidaId         Int      @map("partida_id")
+  jogadorId         Int      @map("jogador_id")
+  gols              Int      @default(0)
+  assistencias      Int      @default(0)
+  cartoesAmarelos   Int      @default(0) @map("cartoes_amarelos")
+  cartoesVermelhos  Int      @default(0) @map("cartoes_vermelhos")
+  criadoEm          DateTime @default(now()) @map("criado_em")
+
+  partida           Partida  @relation(fields: [partidaId], references: [id])
+  jogador           Jogador  @relation(fields: [jogadorId], references: [id])
+
+  @@unique([partidaId, jogadorId])
+  @@map("estatisticas")
+}
+
+model Classificacao {
+  id            Int      @id @default(autoincrement())
+  campeonatoId  Int      @map("campeonato_id")
+  timeId        Int      @map("time_id")
+  pontos        Int      @default(0)
+  jogos         Int      @default(0)
+  vitorias      Int      @default(0)
+  empates       Int      @default(0)
+  derrotas      Int      @default(0)
+  golsPro       Int      @default(0) @map("gols_pro")
+  golsContra    Int      @default(0) @map("gols_contra")
+  saldoGols     Int      @default(0) @map("saldo_gols")
+  atualizadoEm  DateTime @updatedAt @map("atualizado_em")
+
+  campeonato    Campeonato @relation(fields: [campeonatoId], references: [id])
+  time          Time       @relation(fields: [timeId], references: [id])
+
+  @@unique([campeonatoId, timeId])
+  @@map("classificacoes")
+}
+
+model AuditoriaLog {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int?     @map("usuario_id")
+  acao        String   @db.VarChar(50)
+  tabela      String   @db.VarChar(50)
+  registroId  Int?     @map("registro_id")
+  dadosAntigos Json?   @map("dados_antigos")
+  dadosNovos  Json?    @map("dados_novos")
+  ip          String?  @db.VarChar(45)
+  criadoEm    DateTime @default(now()) @map("criado_em")
+
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@map("auditoria_logs")
+}
+
+model ConfiguracaoSistema {
+  id        Int      @id @default(autoincrement())
+  chave     String   @unique @db.VarChar(50)
+  valor     String   @db.Text
+  descricao String?  @db.Text
+  criadoEm  DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@map("configuracoes_sistema")
+}
+
+model Notificacao {
+  id          Int      @id @default(autoincrement())
+  titulo      String   @db.VarChar(100)
+  mensagem    String   @db.Text
+  tipo        String   @db.VarChar(30)
+  lida        Boolean  @default(false)
+  destinatarioId Int?  @map("destinatario_id")
+  criadoEm    DateTime @default(now()) @map("criado_em")
+
+  @@map("notificacoes")
+}
