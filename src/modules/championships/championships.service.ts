@@ -2,17 +2,37 @@ import prisma from '../../prisma/client';
 import { TipoCampeonato } from '@prisma/client';
 
 interface CreateChampionshipData {
-  nome: string;
-  descricao?: string;
-  tipo?: TipoCampeonato;
-  dataInicio: Date;
-  dataFim?: Date;
-  limiteTimesMinimo?: number;
-  limiteTimesMaximo?: number;
+  name: string;
+  description?: string;
+  type?: 'ROUND_ROBIN' | 'KNOCKOUT' | 'MIXED';
+  startDate: Date;
+  endDate?: Date;
+  minTeams?: number;
+  maxTeams?: number;
+}
+
+// Map championship type from English to Portuguese
+function mapTypeToTipoCampeonato(type: string): TipoCampeonato {
+  const mapping: Record<string, TipoCampeonato> = {
+    'ROUND_ROBIN': 'pontos_corridos',
+    'KNOCKOUT': 'mata_mata',
+    'MIXED': 'misto'
+  };
+  return mapping[type] || 'pontos_corridos';
+}
+
+// Map championship type from Portuguese to English
+function mapTipoCampeonatoToType(tipo: TipoCampeonato): string {
+  const mapping: Record<TipoCampeonato, string> = {
+    'pontos_corridos': 'ROUND_ROBIN',
+    'mata_mata': 'KNOCKOUT',
+    'misto': 'MIXED'
+  };
+  return mapping[tipo] || 'ROUND_ROBIN';
 }
 
 export const list = async () => {
-  return prisma.campeonato.findMany({
+  const championships = await prisma.campeonato.findMany({
     include: {
       organizador: {
         select: { id: true, nome: true, email: true }
@@ -23,6 +43,63 @@ export const list = async () => {
     },
     orderBy: { dataInicio: 'desc' }
   });
+
+  return championships.map(c => ({
+    id: c.id,
+    name: c.nome,
+    description: c.descricao,
+    type: mapTipoCampeonatoToType(c.tipo),
+    startDate: c.dataInicio.toISOString(),
+    endDate: c.dataFim?.toISOString() || null,
+    minTeams: c.limiteTimesMinimo,
+    maxTeams: c.limiteTimesMaximo,
+    registrationsOpen: c.inscricoesAbertas,
+    organizer: {
+      id: c.organizador.id,
+      name: c.organizador.nome,
+      email: c.organizador.email
+    },
+    inscriptionCount: c._count.inscricoes,
+    matchCount: c._count.partidas,
+    createdAt: c.criadoEm.toISOString(),
+    updatedAt: c.atualizadoEm.toISOString()
+  }));
+};
+
+export const listByUser = async (userId: number) => {
+  const championships = await prisma.campeonato.findMany({
+    where: { organizadorId: userId },
+    include: {
+      organizador: {
+        select: { id: true, nome: true, email: true }
+      },
+      _count: {
+        select: { inscricoes: true, partidas: true }
+      }
+    },
+    orderBy: { dataInicio: 'desc' }
+  });
+
+  return championships.map(c => ({
+    id: c.id,
+    name: c.nome,
+    description: c.descricao,
+    type: mapTipoCampeonatoToType(c.tipo),
+    startDate: c.dataInicio.toISOString(),
+    endDate: c.dataFim?.toISOString() || null,
+    minTeams: c.limiteTimesMinimo,
+    maxTeams: c.limiteTimesMaximo,
+    registrationsOpen: c.inscricoesAbertas,
+    organizer: {
+      id: c.organizador.id,
+      name: c.organizador.nome,
+      email: c.organizador.email
+    },
+    inscriptionCount: c._count.inscricoes,
+    matchCount: c._count.partidas,
+    createdAt: c.criadoEm.toISOString(),
+    updatedAt: c.atualizadoEm.toISOString()
+  }));
 };
 
 export const getById = async (id: number) => {
@@ -32,12 +109,8 @@ export const getById = async (id: number) => {
       organizador: {
         select: { id: true, nome: true, email: true }
       },
-      inscricoes: {
-        include: {
-          time: {
-            select: { id: true, nome: true, cidade: true }
-          }
-        }
+      _count: {
+        select: { inscricoes: true }
       }
     }
   });
@@ -46,30 +119,45 @@ export const getById = async (id: number) => {
     throw new Error('Campeonato não encontrado');
   }
 
-  return championship;
+  return {
+    id: championship.id,
+    name: championship.nome,
+    description: championship.descricao,
+    type: mapTipoCampeonatoToType(championship.tipo),
+    startDate: championship.dataInicio.toISOString(),
+    endDate: championship.dataFim?.toISOString() || null,
+    minTeams: championship.limiteTimesMinimo,
+    maxTeams: championship.limiteTimesMaximo,
+    registrationsOpen: championship.inscricoesAbertas,
+    organizer: {
+      id: championship.organizador.id,
+      name: championship.organizador.nome,
+      email: championship.organizador.email
+    },
+    inscriptionCount: championship._count.inscricoes,
+    createdAt: championship.criadoEm.toISOString(),
+    updatedAt: championship.atualizadoEm.toISOString()
+  };
 };
 
 export const create = async (data: CreateChampionshipData, userId: number) => {
-  const { nome, descricao, tipo = 'pontos_corridos', dataInicio, dataFim } = data;
+  const { name, description, type = 'ROUND_ROBIN', startDate, endDate, minTeams = 4, maxTeams = 20 } = data;
 
-  if (!nome || !dataInicio) {
+  if (!name || !startDate) {
     throw new Error('Nome e data de início são obrigatórios');
   }
 
-  // Only pontos_corridos is supported for now
-  if (tipo !== 'pontos_corridos') {
-    throw new Error('Apenas campeonatos do tipo pontos_corridos são suportados');
-  }
+  const tipoCampeonato = mapTypeToTipoCampeonato(type);
 
-  return prisma.campeonato.create({
+  const championship = await prisma.campeonato.create({
     data: {
-      nome,
-      descricao,
-      tipo,
-      dataInicio: new Date(dataInicio),
-      dataFim: dataFim ? new Date(dataFim) : undefined,
-      limiteTimesMinimo: data.limiteTimesMinimo || 4,
-      limiteTimesMaximo: data.limiteTimesMaximo || 20,
+      nome: name,
+      descricao: description,
+      tipo: tipoCampeonato,
+      dataInicio: new Date(startDate),
+      dataFim: endDate ? new Date(endDate) : undefined,
+      limiteTimesMinimo: minTeams,
+      limiteTimesMaximo: maxTeams,
       organizadorId: userId
     },
     include: {
@@ -78,6 +166,25 @@ export const create = async (data: CreateChampionshipData, userId: number) => {
       }
     }
   });
+
+  return {
+    id: championship.id,
+    name: championship.nome,
+    description: championship.descricao,
+    type: mapTipoCampeonatoToType(championship.tipo),
+    startDate: championship.dataInicio.toISOString(),
+    endDate: championship.dataFim?.toISOString() || null,
+    minTeams: championship.limiteTimesMinimo,
+    maxTeams: championship.limiteTimesMaximo,
+    registrationsOpen: championship.inscricoesAbertas,
+    organizer: {
+      id: championship.organizador.id,
+      name: championship.organizador.nome,
+      email: championship.organizador.email
+    },
+    createdAt: championship.criadoEm.toISOString(),
+    updatedAt: championship.atualizadoEm.toISOString()
+  };
 };
 
 export const update = async (id: number, data: Partial<CreateChampionshipData>, userId: number) => {
@@ -91,14 +198,44 @@ export const update = async (id: number, data: Partial<CreateChampionshipData>, 
     throw new Error('Apenas o organizador pode atualizar o campeonato');
   }
 
-  return prisma.campeonato.update({
+  const updateData: any = {};
+  
+  if (data.name !== undefined) updateData.nome = data.name;
+  if (data.description !== undefined) updateData.descricao = data.description;
+  if (data.type !== undefined) updateData.tipo = mapTypeToTipoCampeonato(data.type);
+  if (data.startDate !== undefined) updateData.dataInicio = new Date(data.startDate);
+  if (data.endDate !== undefined) updateData.dataFim = data.endDate ? new Date(data.endDate) : null;
+  if (data.minTeams !== undefined) updateData.limiteTimesMinimo = data.minTeams;
+  if (data.maxTeams !== undefined) updateData.limiteTimesMaximo = data.maxTeams;
+
+  const updatedChampionship = await prisma.campeonato.update({
     where: { id },
-    data: {
-      ...data,
-      dataInicio: data.dataInicio ? new Date(data.dataInicio) : undefined,
-      dataFim: data.dataFim ? new Date(data.dataFim) : undefined
+    data: updateData,
+    include: {
+      organizador: {
+        select: { id: true, nome: true, email: true }
+      }
     }
   });
+
+  return {
+    id: updatedChampionship.id,
+    name: updatedChampionship.nome,
+    description: updatedChampionship.descricao,
+    type: mapTipoCampeonatoToType(updatedChampionship.tipo),
+    startDate: updatedChampionship.dataInicio.toISOString(),
+    endDate: updatedChampionship.dataFim?.toISOString() || null,
+    minTeams: updatedChampionship.limiteTimesMinimo,
+    maxTeams: updatedChampionship.limiteTimesMaximo,
+    registrationsOpen: updatedChampionship.inscricoesAbertas,
+    organizer: {
+      id: updatedChampionship.organizador.id,
+      name: updatedChampionship.organizador.nome,
+      email: updatedChampionship.organizador.email
+    },
+    createdAt: updatedChampionship.criadoEm.toISOString(),
+    updatedAt: updatedChampionship.atualizadoEm.toISOString()
+  };
 };
 
 export const remove = async (id: number, userId: number) => {

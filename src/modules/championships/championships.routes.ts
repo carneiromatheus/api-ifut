@@ -9,6 +9,7 @@ import { authorize } from '../../middlewares/authorize';
 const router = Router();
 
 router.get('/', championshipsController.list);
+router.get('/my', authenticate, championshipsController.listByUser);
 router.get('/:id', championshipsController.getById);
 router.post('/', authenticate, authorize(['organizador', 'administrador']), championshipsController.create);
 router.put('/:id', authenticate, championshipsController.update);

@@ -4,19 +4,53 @@ import { generateToken } from '../../utils/jwt';
 import { TipoUsuario } from '@prisma/client';
 
 interface RegisterData {
-  nome: string;
+  nome?: string;
+  name?: string;
   email: string;
-  senha: string;
+  senha?: string;
+  password?: string;
   tipo?: TipoUsuario;
+  role?: string;
 }
 
 interface LoginData {
   email: string;
-  senha: string;
+  senha?: string;
+  password?: string;
 }
 
+// Mapeador de roles do front-end para valores do banco de dados
+const mapRoleToTipoUsuario = (role?: string): TipoUsuario => {
+  if (!role) return TipoUsuario.organizador;
+  
+  const roleMap: { [key: string]: TipoUsuario } = {
+    'ORGANIZER': TipoUsuario.organizador,
+    'COACH': TipoUsuario.tecnico,
+    'ADMIN': TipoUsuario.administrador,
+    'organizador': TipoUsuario.organizador,
+    'tecnico': TipoUsuario.tecnico,
+    'administrador': TipoUsuario.administrador,
+  };
+  
+  return roleMap[role] || TipoUsuario.organizador;
+};
+
+// Mapeador de valores do banco de dados para roles do front-end
+const mapTipoUsuarioToRole = (tipo: TipoUsuario): 'COACH' | 'ORGANIZER' | 'ADMIN' => {
+  const roleMap: { [key in TipoUsuario]: 'COACH' | 'ORGANIZER' | 'ADMIN' } = {
+    [TipoUsuario.organizador]: 'ORGANIZER',
+    [TipoUsuario.tecnico]: 'COACH',
+    [TipoUsuario.administrador]: 'ADMIN',
+  };
+  
+  return roleMap[tipo] || 'ORGANIZER';
+};
+
 export const register = async (data: RegisterData) => {
-  const { nome, email, senha, tipo = 'organizador' } = data;
+  const nome = data.nome || data.name;
+  const email = data.email;
+  const senha = data.senha || data.password;
+  const tipo = data.tipo || mapRoleToTipoUsuario(data.role);
 
   if (!nome || !email || !senha) {
     throw new Error('Campos obrigatórios: nome, email, senha');
@@ -34,7 +68,7 @@ export const register = async (data: RegisterData) => {
       nome,
       email,
       senha: hashedPassword,
-      tipo: tipo as TipoUsuario
+      tipo
     },
     select: {
       id: true,
@@ -51,11 +85,22 @@ export const register = async (data: RegisterData) => {
     tipo: user.tipo
   });
 
-  return { user, token };
+  return {
+    user: {
+      id: user.id,
+      name: user.nome,
+      email: user.email,
+      role: mapTipoUsuarioToRole(user.tipo),
+      createdAt: user.criadoEm.toISOString(),
+      updatedAt: user.criadoEm.toISOString(),
+    },
+    token,
+  };
 };
 
 export const login = async (data: LoginData) => {
-  const { email, senha } = data;
+  const email = data.email;
+  const senha = data.senha || data.password;
 
   if (!email || !senha) {
     throw new Error('Email e senha são obrigatórios');
@@ -84,11 +129,13 @@ export const login = async (data: LoginData) => {
   return {
     user: {
       id: user.id,
-      nome: user.nome,
+      name: user.nome,
       email: user.email,
-      tipo: user.tipo
+      role: mapTipoUsuarioToRole(user.tipo),
+      createdAt: user.criadoEm.toISOString(),
+      updatedAt: user.criadoEm.toISOString(),
     },
-    token
+    token,
   };
 };
 
@@ -109,5 +156,12 @@ export const getProfile = async (userId: number) => {
     throw new Error('Usuário não encontrado');
   }
 
-  return user;
+  return {
+    id: user.id,
+    name: user.nome,
+    email: user.email,
+    role: mapTipoUsuarioToRole(user.tipo),
+    createdAt: user.criadoEm.toISOString(),
+    updatedAt: user.criadoEm.toISOString(),
+  };
 };

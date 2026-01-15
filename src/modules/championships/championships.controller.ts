@@ -12,6 +12,15 @@ export const list = async (req: Request, res: Response) => {
   }
 };
 
+export const listByUser = async (req: AuthRequest, res: Response) => {
+  try {
+    const championships = await championshipsService.listByUser(req.user!.userId);
+    return successResponse(res, championships);
+  } catch (error: any) {
+    return errorResponse(res, error.message);
+  }
+};
+
 export const getById = async (req: Request, res: Response) => {
   try {
     const championship = await championshipsService.getById(parseInt(req.params.id));
