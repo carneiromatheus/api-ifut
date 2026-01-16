@@ -18,6 +18,18 @@ export const list = async () => {
   });
 };
 
+export const listByUser = async (userId: number) => {
+  return prisma.time.findMany({
+    where: { responsavelId: userId },
+    include: {
+      responsavel: {
+        select: { id: true, nome: true, email: true }
+      },
+      _count: { select: { jogadores: true } }
+    }
+  });
+};
+
 export const getById = async (id: number) => {
   const team = await prisma.time.findUnique({
     where: { id },

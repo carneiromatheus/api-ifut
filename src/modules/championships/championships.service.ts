@@ -102,6 +102,61 @@ export const listByUser = async (userId: number) => {
   }));
 };
 
+export const listByParticipation = async (userId: number) => {
+  // Get user's teams first
+  const userTeams = await prisma.time.findMany({
+    where: { responsavelId: userId },
+    select: { id: true }
+  });
+
+  const teamIds = userTeams.map(t => t.id);
+
+  if (teamIds.length === 0) {
+    return [];
+  }
+
+  // Get championships where user's teams are registered
+  const championships = await prisma.campeonato.findMany({
+    where: {
+      inscricoes: {
+        some: {
+          timeId: { in: teamIds }
+        }
+      }
+    },
+    include: {
+      organizador: {
+        select: { id: true, nome: true, email: true }
+      },
+      _count: {
+        select: { inscricoes: true, partidas: true }
+      }
+    },
+    orderBy: { dataInicio: 'desc' }
+  });
+
+  return championships.map(c => ({
+    id: c.id,
+    name: c.nome,
+    description: c.descricao,
+    type: mapTipoCampeonatoToType(c.tipo),
+    startDate: c.dataInicio.toISOString(),
+    endDate: c.dataFim?.toISOString() || null,
+    minTeams: c.limiteTimesMinimo,
+    maxTeams: c.limiteTimesMaximo,
+    registrationsOpen: c.inscricoesAbertas,
+    organizer: {
+      id: c.organizador.id,
+      name: c.organizador.nome,
+      email: c.organizador.email
+    },
+    inscriptionCount: c._count.inscricoes,
+    matchCount: c._count.partidas,
+    createdAt: c.criadoEm.toISOString(),
+    updatedAt: c.atualizadoEm.toISOString()
+  }));
+};
+
 export const getById = async (id: number) => {
   const championship = await prisma.campeonato.findUnique({
     where: { id },

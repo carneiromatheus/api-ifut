@@ -21,6 +21,15 @@ export const getById = async (req: Request, res: Response) => {
   }
 };
 
+export const listMy = async (req: AuthRequest, res: Response) => {
+  try {
+    const teams = await teamsService.listByUser(req.user!.userId);
+    return successResponse(res, teams);
+  } catch (error: any) {
+    return errorResponse(res, error.message);
+  }
+};
+
 export const create = async (req: AuthRequest, res: Response) => {
   try {
     const team = await teamsService.create(req.body, req.user!.userId);

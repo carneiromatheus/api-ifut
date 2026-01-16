@@ -14,7 +14,17 @@ export const list = async (req: Request, res: Response) => {
 
 export const listByUser = async (req: AuthRequest, res: Response) => {
   try {
-    const championships = await championshipsService.listByUser(req.user!.userId);
+    const userType = (req.user as any).tipo;
+    let championships;
+    
+    // If organizer, return championships they organize
+    if (userType === 'organizador' || userType === 'administrador') {
+      championships = await championshipsService.listByUser(req.user!.userId);
+    } else {
+      // If coach, return championships their teams participate in
+      championships = await championshipsService.listByParticipation(req.user!.userId);
+    }
+    
     return successResponse(res, championships);
   } catch (error: any) {
     return errorResponse(res, error.message);

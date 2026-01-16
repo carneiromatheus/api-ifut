@@ -7,6 +7,7 @@ import { authorize } from '../../middlewares/authorize';
 const router = Router();
 
 router.get('/', teamsController.list);
+router.get('/my', authenticate, teamsController.listMy);
 router.get('/:id', teamsController.getById);
 router.get('/:id/history', statisticsController.getTeamHistory);
 router.get('/:id/vs/:id2', statisticsController.getHeadToHead);
