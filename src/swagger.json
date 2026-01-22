@@ -295,6 +295,20 @@
         }
       }
     },
+    "/teams/my": {
+      "get": {
+        "tags": ["Times"],
+        "summary": "Listar times do usuário logado",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Lista de times do usuário",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/Time"}}}}
+          },
+          "401": {"description": "Não autenticado", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
+        }
+      }
+    },
     "/teams/{id}": {
       "get": {
         "tags": ["Times"],
@@ -503,6 +517,20 @@
         "responses": {"201": {"description": "Campeonato criado"}}
       }
     },
+    "/championships/my": {
+      "get": {
+        "tags": ["Campeonatos"],
+        "summary": "Listar campeonatos do usuário logado",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "Lista de campeonatos do usuário",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/Campeonato"}}}}
+          },
+          "401": {"description": "Não autenticado", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}}
+        }
+      }
+    },
     "/championships/{id}": {
       "get": {
         "tags": ["Campeonatos"],
@@ -546,6 +574,19 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/championships/{id}/matches": {
+      "get": {
+        "tags": ["Partidas"],
+        "summary": "Listar partidas de um campeonato",
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "200": {
+            "description": "Lista de partidas do campeonato",
+            "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/Partida"}}}}
           }
         }
       }
@@ -713,17 +754,17 @@
         }
       }
     },
-    "/registrations": {
+    "/registrations/championship/{campeonatoId}": {
       "get": {
         "tags": ["Inscrições"],
-        "summary": "Listar inscrições",
+        "summary": "Listar inscrições por campeonato",
         "parameters": [
-          {"name": "campeonatoId", "in": "query", "schema": {"type": "integer"}},
-          {"name": "timeId", "in": "query", "schema": {"type": "integer"}},
-          {"name": "status", "in": "query", "schema": {"type": "string", "enum": ["pendente", "aprovada", "rejeitada"]}}
+          {"name": "campeonatoId", "in": "path", "required": true, "schema": {"type": "integer"}}
         ],
         "responses": {"200": {"description": "Lista de inscrições"}}
-      },
+      }
+    },
+    "/registrations": {
       "post": {
         "tags": ["Inscrições"],
         "summary": "Criar inscrição de time em campeonato",
@@ -744,21 +785,6 @@
           }
         },
         "responses": {"201": {"description": "Inscrição criada"}}
-      }
-    },
-    "/registrations/{id}": {
-      "get": {
-        "tags": ["Inscrições"],
-        "summary": "Obter inscrição por ID",
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "responses": {"200": {"description": "Dados da inscrição"}}
-      },
-      "delete": {
-        "tags": ["Inscrições"],
-        "summary": "Cancelar inscrição",
-        "security": [{"bearerAuth": []}],
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "responses": {"200": {"description": "Inscrição cancelada"}}
       }
     },
     "/registrations/{id}/approve": {
@@ -792,16 +818,6 @@
       }
     },
     "/matches": {
-      "get": {
-        "tags": ["Partidas"],
-        "summary": "Listar partidas",
-        "parameters": [
-          {"name": "campeonatoId", "in": "query", "schema": {"type": "integer"}},
-          {"name": "rodada", "in": "query", "schema": {"type": "integer"}},
-          {"name": "status", "in": "query", "schema": {"type": "string"}}
-        ],
-        "responses": {"200": {"description": "Lista de partidas"}}
-      },
       "post": {
         "tags": ["Partidas"],
         "summary": "Criar nova partida",
@@ -833,43 +849,16 @@
         "tags": ["Partidas"],
         "summary": "Obter partida por ID",
         "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "responses": {"200": {"description": "Dados da partida"}}
-      },
-      "put": {
-        "tags": ["Partidas"],
-        "summary": "Atualizar partida",
-        "security": [{"bearerAuth": []}],
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "responses": {"200": {"description": "Partida atualizada"}}
-      },
-      "delete": {
-        "tags": ["Partidas"],
-        "summary": "Remover partida",
-        "security": [{"bearerAuth": []}],
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "responses": {"200": {"description": "Partida removida"}}
+        "responses": {"200": {"description": "Dados da partida"}, "404": {"description": "Partida não encontrada"}}
       }
     },
-    "/matches/{id}/advance": {
-      "post": {
-        "tags": ["Chaveamento"],
-        "summary": "Avançar vencedor para próxima fase",
-        "description": "Após registrar o resultado de uma partida mata-mata, use este endpoint para avançar o vencedor.",
-        "security": [{"bearerAuth": []}],
-        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "responses": {
-          "200": {"description": "Vencedor avançou"},
-          "400": {"description": "Partida não finalizada"}
-        }
-      }
-    },
-    "/results/{matchId}": {
-      "post": {
+    "/matches/{id}/result": {
+      "patch": {
         "tags": ["Resultados"],
         "summary": "Registrar resultado de partida",
         "description": "Registra o resultado da partida incluindo escalações e estatísticas dos jogadores.",
         "security": [{"bearerAuth": []}],
-        "parameters": [{"name": "matchId", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
         "requestBody": {
           "required": true,
           "content": {
@@ -921,6 +910,53 @@
         "responses": {
           "200": {"description": "Resultado registrado"},
           "400": {"description": "Dados inválidos"}
+        }
+      }
+    },
+    "/matches/{id}/advance": {
+      "post": {
+        "tags": ["Chaveamento"],
+        "summary": "Avançar vencedor para próxima fase",
+        "description": "Após registrar o resultado de uma partida mata-mata, use este endpoint para avançar o vencedor.",
+        "security": [{"bearerAuth": []}],
+        "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "200": {"description": "Vencedor avançou"},
+          "400": {"description": "Partida não finalizada"}
+        }
+      }
+    },
+    "/statistics/player/{jogadorId}": {
+      "get": {
+        "tags": ["Estatísticas"],
+        "summary": "Estatísticas completas do jogador",
+        "parameters": [{"name": "jogadorId", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {
+          "200": {
+            "description": "Estatísticas do jogador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "jogador": {"type": "object"},
+                    "estatisticasGerais": {
+                      "type": "object",
+                      "properties": {
+                        "totalJogos": {"type": "integer"},
+                        "totalGols": {"type": "integer"},
+                        "totalAssistencias": {"type": "integer"},
+                        "cartoesAmarelos": {"type": "integer"},
+                        "cartoesVermelhos": {"type": "integer"},
+                        "mediaGolsPorJogo": {"type": "number"}
+                      }
+                    },
+                    "porCampeonato": {"type": "array", "items": {"type": "object"}}
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
