@@ -6,6 +6,7 @@ const router = Router();
 
 router.get('/championship/:campeonatoId', registrationsController.listByChampionship);
 router.post('/', authenticate, registrationsController.create);
+router.delete('/:id', authenticate, registrationsController.remove);
 router.patch('/:id/approve', authenticate, registrationsController.approve);
 router.patch('/:id/reject', authenticate, registrationsController.reject);
 

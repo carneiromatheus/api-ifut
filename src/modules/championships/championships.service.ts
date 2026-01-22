@@ -37,8 +37,12 @@ export const list = async () => {
       organizador: {
         select: { id: true, nome: true, email: true }
       },
+      inscricoes: {
+        where: { status: 'aprovada' },
+        select: { id: true }
+      },
       _count: {
-        select: { inscricoes: true, partidas: true }
+        select: { partidas: true }
       }
     },
     orderBy: { dataInicio: 'desc' }
@@ -59,7 +63,7 @@ export const list = async () => {
       name: c.organizador.nome,
       email: c.organizador.email
     },
-    inscriptionCount: c._count.inscricoes,
+    inscriptionCount: c.inscricoes.length,
     matchCount: c._count.partidas,
     createdAt: c.criadoEm.toISOString(),
     updatedAt: c.atualizadoEm.toISOString()
@@ -73,8 +77,12 @@ export const listByUser = async (userId: number) => {
       organizador: {
         select: { id: true, nome: true, email: true }
       },
+      inscricoes: {
+        where: { status: 'aprovada' },
+        select: { id: true }
+      },
       _count: {
-        select: { inscricoes: true, partidas: true }
+        select: { partidas: true }
       }
     },
     orderBy: { dataInicio: 'desc' }
@@ -95,7 +103,7 @@ export const listByUser = async (userId: number) => {
       name: c.organizador.nome,
       email: c.organizador.email
     },
-    inscriptionCount: c._count.inscricoes,
+    inscriptionCount: c.inscricoes.length,
     matchCount: c._count.partidas,
     createdAt: c.criadoEm.toISOString(),
     updatedAt: c.atualizadoEm.toISOString()
@@ -115,12 +123,13 @@ export const listByParticipation = async (userId: number) => {
     return [];
   }
 
-  // Get championships where user's teams are registered
+  // Get championships where user's teams are registered with approved status
   const championships = await prisma.campeonato.findMany({
     where: {
       inscricoes: {
         some: {
-          timeId: { in: teamIds }
+          timeId: { in: teamIds },
+          status: 'aprovada'
         }
       }
     },
@@ -128,8 +137,12 @@ export const listByParticipation = async (userId: number) => {
       organizador: {
         select: { id: true, nome: true, email: true }
       },
+      inscricoes: {
+        where: { status: 'aprovada' },
+        select: { id: true }
+      },
       _count: {
-        select: { inscricoes: true, partidas: true }
+        select: { partidas: true }
       }
     },
     orderBy: { dataInicio: 'desc' }
@@ -150,7 +163,7 @@ export const listByParticipation = async (userId: number) => {
       name: c.organizador.nome,
       email: c.organizador.email
     },
-    inscriptionCount: c._count.inscricoes,
+    inscriptionCount: c.inscricoes.length,
     matchCount: c._count.partidas,
     createdAt: c.criadoEm.toISOString(),
     updatedAt: c.atualizadoEm.toISOString()
@@ -164,8 +177,9 @@ export const getById = async (id: number) => {
       organizador: {
         select: { id: true, nome: true, email: true }
       },
-      _count: {
-        select: { inscricoes: true }
+      inscricoes: {
+        where: { status: 'aprovada' },
+        select: { id: true }
       }
     }
   });
@@ -189,7 +203,7 @@ export const getById = async (id: number) => {
       name: championship.organizador.nome,
       email: championship.organizador.email
     },
-    inscriptionCount: championship._count.inscricoes,
+    inscriptionCount: championship.inscricoes.length,
     createdAt: championship.criadoEm.toISOString(),
     updatedAt: championship.atualizadoEm.toISOString()
   };

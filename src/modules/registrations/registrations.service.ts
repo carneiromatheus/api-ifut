@@ -136,3 +136,34 @@ export const reject = async (id: number, motivo: string, userId: number) => {
     }
   });
 };
+
+export const remove = async (id: number, userId: number) => {
+  const registration = await prisma.inscricao.findUnique({
+    where: { id },
+    include: {
+      campeonato: true,
+      time: true
+    }
+  });
+
+  if (!registration) {
+    throw new Error('Inscrição não encontrada');
+  }
+
+  const isTeamOwner = registration.time.responsavelId === userId;
+  const isOrganizer = registration.campeonato.organizadorId === userId;
+
+  if (!isTeamOwner && !isOrganizer) {
+    throw new Error('Apenas o responsável do time ou o organizador pode desinscrever');
+  }
+
+  // Clean classification entry if it exists for this team/championship
+  await prisma.classificacao.deleteMany({
+    where: {
+      campeonatoId: registration.campeonatoId,
+      timeId: registration.timeId
+    }
+  });
+
+  return prisma.inscricao.delete({ where: { id } });
+};

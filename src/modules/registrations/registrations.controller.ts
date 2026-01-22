@@ -47,3 +47,12 @@ export const reject = async (req: AuthRequest, res: Response) => {
     return errorResponse(res, error.message, 403);
   }
 };
+
+export const remove = async (req: AuthRequest, res: Response) => {
+  try {
+    await registrationsService.remove(parseInt(req.params.id), req.user!.userId);
+    return successResponse(res, { message: 'Inscrição removida com sucesso' });
+  } catch (error: any) {
+    return errorResponse(res, error.message, 403);
+  }
+};
