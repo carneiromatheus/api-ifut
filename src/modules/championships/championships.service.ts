@@ -424,3 +424,51 @@ export const start = async (id: number, userId: number) => {
     updatedAt: updatedChampionship.atualizadoEm.toISOString()
   };
 };
+
+export const toggleRegistrations = async (id: number, userId: number) => {
+  const championship = await prisma.campeonato.findUnique({
+    where: { id },
+    include: {
+      organizador: {
+        select: { id: true, nome: true, email: true }
+      }
+    }
+  });
+
+  if (!championship) {
+    throw new Error('Campeonato não encontrado');
+  }
+
+  if (championship.organizadorId !== userId) {
+    throw new Error('Apenas o organizador pode alterar o status de inscrições');
+  }
+
+  const updatedChampionship = await prisma.campeonato.update({
+    where: { id },
+    data: { inscricoesAbertas: !championship.inscricoesAbertas },
+    include: {
+      organizador: {
+        select: { id: true, nome: true, email: true }
+      }
+    }
+  });
+
+  return {
+    id: updatedChampionship.id,
+    name: updatedChampionship.nome,
+    description: updatedChampionship.descricao,
+    type: mapTipoCampeonatoToType(updatedChampionship.tipo),
+    startDate: updatedChampionship.dataInicio.toISOString(),
+    endDate: updatedChampionship.dataFim?.toISOString() || null,
+    minTeams: updatedChampionship.limiteTimesMinimo,
+    maxTeams: updatedChampionship.limiteTimesMaximo,
+    registrationsOpen: updatedChampionship.inscricoesAbertas,
+    organizer: {
+      id: updatedChampionship.organizador.id,
+      name: updatedChampionship.organizador.nome,
+      email: updatedChampionship.organizador.email
+    },
+    createdAt: updatedChampionship.criadoEm.toISOString(),
+    updatedAt: updatedChampionship.atualizadoEm.toISOString()
+  };
+};
