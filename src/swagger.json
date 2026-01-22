@@ -282,7 +282,6 @@
                 "properties": {
                   "nome": {"type": "string", "example": "Flamengo"},
                   "cidade": {"type": "string", "example": "Rio de Janeiro"},
-                  "escudo": {"type": "string"},
                   "fundadoEm": {"type": "string", "format": "date"}
                 }
               }
@@ -321,7 +320,21 @@
         "summary": "Atualizar time",
         "security": [{"bearerAuth": []}],
         "parameters": [{"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Time"}}}},
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nome": {"type": "string", "example": "Flamengo"},
+                  "cidade": {"type": "string", "example": "Rio de Janeiro"},
+                  "fundadoEm": {"type": "string", "format": "date"}
+                }
+              }
+            }
+          }
+        },
         "responses": {"200": {"description": "Time atualizado"}, "403": {"description": "Sem permissão"}}
       },
       "delete": {

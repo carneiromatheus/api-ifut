@@ -3,7 +3,6 @@ import prisma from '../../prisma/client';
 interface CreateTeamData {
   nome: string;
   cidade: string;
-  escudo?: string;
   fundadoEm?: Date;
 }
 
@@ -58,7 +57,7 @@ export const getById = async (id: number) => {
 };
 
 export const create = async (data: CreateTeamData, userId: number) => {
-  const { nome, cidade, escudo, fundadoEm } = data;
+  const { nome, cidade, fundadoEm } = data;
 
   if (!nome || !cidade) {
     throw new Error('Nome e cidade são obrigatórios');
@@ -68,7 +67,6 @@ export const create = async (data: CreateTeamData, userId: number) => {
     data: {
       nome,
       cidade,
-      escudo,
       fundadoEm: fundadoEm ? new Date(fundadoEm) : undefined,
       responsavelId: userId
     },
@@ -91,12 +89,23 @@ export const update = async (id: number, data: Partial<CreateTeamData>, userId: 
     throw new Error('Apenas o responsável pode atualizar o time');
   }
 
+  const updates: { nome?: string; cidade?: string; fundadoEm?: Date } = {};
+
+  if (data.nome !== undefined) {
+    updates.nome = data.nome;
+  }
+
+  if (data.cidade !== undefined) {
+    updates.cidade = data.cidade;
+  }
+
+  if (data.fundadoEm !== undefined) {
+    updates.fundadoEm = data.fundadoEm ? new Date(data.fundadoEm) : undefined;
+  }
+
   return prisma.time.update({
     where: { id },
-    data: {
-      ...data,
-      fundadoEm: data.fundadoEm ? new Date(data.fundadoEm) : undefined
-    }
+    data: updates
   });
 };
 
