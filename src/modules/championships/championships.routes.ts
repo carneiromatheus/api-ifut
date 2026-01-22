@@ -13,6 +13,7 @@ router.get('/my', authenticate, championshipsController.listByUser);
 router.get('/:id', championshipsController.getById);
 router.post('/', authenticate, authorize(['organizador', 'administrador']), championshipsController.create);
 router.put('/:id', authenticate, championshipsController.update);
+router.post('/:id/start', authenticate, championshipsController.start);
 router.delete('/:id', authenticate, championshipsController.remove);
 
 // GET /api/championships/:id/matches - List matches (public)

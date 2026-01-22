@@ -320,3 +320,107 @@ export const remove = async (id: number, userId: number) => {
 
   return prisma.campeonato.delete({ where: { id } });
 };
+
+export const start = async (id: number, userId: number) => {
+  const championship = await prisma.campeonato.findUnique({
+    where: { id },
+    include: {
+      organizador: {
+        select: { id: true, nome: true, email: true }
+      }
+    }
+  });
+
+  if (!championship) {
+    throw new Error('Campeonato não encontrado');
+  }
+
+  if (championship.organizadorId !== userId) {
+    throw new Error('Apenas o organizador pode iniciar o campeonato');
+  }
+
+  if (!championship.inscricoesAbertas) {
+    throw new Error('Campeonato já foi iniciado');
+  }
+
+  // Get approved registrations
+  const registrations = await prisma.inscricao.findMany({
+    where: {
+      campeonatoId: id,
+      status: 'aprovada'
+    }
+  });
+
+  if (registrations.length < championship.limiteTimesMinimo) {
+    throw new Error(`Número mínimo de times não atingido. Mínimo: ${championship.limiteTimesMinimo}, Atual: ${registrations.length}`);
+  }
+
+  // Close registrations
+  const updatedChampionship = await prisma.campeonato.update({
+    where: { id },
+    data: { inscricoesAbertas: false },
+    include: {
+      organizador: {
+        select: { id: true, nome: true, email: true }
+      }
+    }
+  });
+
+  // Generate matches based on championship type
+  if (championship.tipo === 'PONTOS_CORRIDOS') {
+    // Round-robin: all teams play against each other
+    const teamIds = registrations.map(r => r.timeId);
+    const matches = [];
+    
+    for (let i = 0; i < teamIds.length; i++) {
+      for (let j = i + 1; j < teamIds.length; j++) {
+        // Home match
+        matches.push({
+          campeonatoId: id,
+          timeCasaId: teamIds[i],
+          timeVisitanteId: teamIds[j],
+          data: new Date(championship.dataInicio),
+          status: 'AGENDADA' as const
+        });
+        // Away match
+        matches.push({
+          campeonatoId: id,
+          timeCasaId: teamIds[j],
+          timeVisitanteId: teamIds[i],
+          data: new Date(championship.dataInicio),
+          status: 'AGENDADA' as const
+        });
+      }
+    }
+    
+    // Shuffle matches
+    for (let i = matches.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [matches[i], matches[j]] = [matches[j], matches[i]];
+    }
+    
+    // Create matches in database
+    await prisma.partida.createMany({
+      data: matches
+    });
+  }
+
+  return {
+    id: updatedChampionship.id,
+    name: updatedChampionship.nome,
+    description: updatedChampionship.descricao,
+    type: mapTipoCampeonatoToType(updatedChampionship.tipo),
+    startDate: updatedChampionship.dataInicio.toISOString(),
+    endDate: updatedChampionship.dataFim?.toISOString() || null,
+    minTeams: updatedChampionship.limiteTimesMinimo,
+    maxTeams: updatedChampionship.limiteTimesMaximo,
+    registrationsOpen: updatedChampionship.inscricoesAbertas,
+    organizer: {
+      id: updatedChampionship.organizador.id,
+      name: updatedChampionship.organizador.nome,
+      email: updatedChampionship.organizador.email
+    },
+    createdAt: updatedChampionship.criadoEm.toISOString(),
+    updatedAt: updatedChampionship.atualizadoEm.toISOString()
+  };
+};
