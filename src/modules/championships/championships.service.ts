@@ -57,6 +57,7 @@ export const list = async () => {
     endDate: c.dataFim?.toISOString() || null,
     minTeams: c.limiteTimesMinimo,
     maxTeams: c.limiteTimesMaximo,
+    started: c.iniciado,
     organizer: {
       id: String(c.organizador.id),
       name: c.organizador.nome,
