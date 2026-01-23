@@ -7,6 +7,10 @@
   },
   "servers": [
     {
+      "url": "https://api-ifut.onrender.com/api",
+      "description": "Servidor de produção"
+    },
+    {
       "url": "http://localhost:3000/api",
       "description": "Servidor de desenvolvimento"
     }
