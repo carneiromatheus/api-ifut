@@ -367,7 +367,7 @@ export const start = async (id: number, userId: number) => {
   });
 
   // Generate matches based on championship type
-  if (championship.tipo === 'PONTOS_CORRIDOS') {
+  if (championship.tipo === 'pontos_corridos') {
     // Round-robin: all teams play against each other
     const teamIds = registrations.map(r => r.timeId);
     const matches = [];
@@ -379,16 +379,18 @@ export const start = async (id: number, userId: number) => {
           campeonatoId: id,
           timeCasaId: teamIds[i],
           timeVisitanteId: teamIds[j],
-          data: new Date(championship.dataInicio),
-          status: 'AGENDADA' as const
+          rodada: 1,
+          dataHora: new Date(championship.dataInicio),
+          status: 'agendada' as const
         });
         // Away match
         matches.push({
           campeonatoId: id,
           timeCasaId: teamIds[j],
           timeVisitanteId: teamIds[i],
-          data: new Date(championship.dataInicio),
-          status: 'AGENDADA' as const
+          rodada: 1,
+          dataHora: new Date(championship.dataInicio),
+          status: 'agendada' as const
         });
       }
     }

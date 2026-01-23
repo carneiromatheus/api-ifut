@@ -28,7 +28,7 @@ app.use(express.json());
 app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req: express.Request, res: express.Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -46,7 +46,7 @@ app.use('/api', bracketRoutes);
 app.use('/api', groupsRoutes);
 
 // Protected profile route
-app.get('/api/auth/me', authenticate, (req, res, next) => {
+app.get('/api/auth/me', authenticate, (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authRoutes = require('./modules/auth/auth.controller');
   authRoutes.getProfile(req, res);
 });
@@ -58,7 +58,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // 404 handler
-app.use((req, res) => {
+app.use((req: express.Request, res: express.Response) => {
   res.status(404).json({ success: false, error: 'Rota não encontrada' });
 });
 
