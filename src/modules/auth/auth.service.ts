@@ -157,7 +157,7 @@ export const getProfile = async (userId: number) => {
   }
 
   return {
-    id: user.id,
+    id: String(user.id),
     name: user.nome,
     email: user.email,
     role: mapTipoUsuarioToRole(user.tipo),

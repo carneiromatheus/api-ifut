@@ -82,15 +82,3 @@ export const start = async (req: AuthRequest, res: Response) => {
     return errorResponse(res, error.message, 403);
   }
 };
-
-export const toggleRegistrations = async (req: AuthRequest, res: Response) => {
-  try {
-    const championship = await championshipsService.toggleRegistrations(
-      parseInt(req.params.id),
-      req.user!.userId
-    );
-    return successResponse(res, championship);
-  } catch (error: any) {
-    return errorResponse(res, error.message, 403);
-  }
-};

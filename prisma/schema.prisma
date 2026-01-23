@@ -100,7 +100,7 @@ model Campeonato {
   dataFim           DateTime?      @map("data_fim")
   limiteTimesMinimo Int            @default(4) @map("limite_times_minimo")
   limiteTimesMaximo Int            @default(20) @map("limite_times_maximo")
-  inscricoesAbertas Boolean        @default(true) @map("inscricoes_abertas")
+  iniciado          Boolean        @default(false)
   organizadorId     Int            @map("organizador_id")
   criadoEm          DateTime       @default(now()) @map("criado_em")
   atualizadoEm      DateTime       @updatedAt @map("atualizado_em")
@@ -141,7 +141,7 @@ model Partida {
   faseId          Int?          @map("fase_id")
   grupoId         Int?          @map("grupo_id")
   rodada          Int
-  dataHora        DateTime      @map("data_hora")
+  dataHora        DateTime?     @map("data_hora")
   local           String?       @db.VarChar(100)
   status          StatusPartida @default(agendada)
   golsTimeCasa    Int?          @map("gols_time_casa")

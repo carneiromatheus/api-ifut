@@ -6,11 +6,17 @@ import { authorize } from '../../middlewares/authorize';
 
 const router = Router();
 
+// GET /api/matches - List matches with optional filters (public)
+router.get('/', matchesController.list);
+
 // POST /api/matches - Create match (authenticated, organizer only)
 router.post('/', authenticate, authorize(['organizador', 'administrador']), matchesController.create);
 
 // GET /api/matches/:id - Get match details (public)
 router.get('/:id', matchesController.getById);
+
+// PATCH /api/matches/:id - Update match details (authenticated, organizer only)
+router.patch('/:id', authenticate, authorize(['organizador', 'administrador']), matchesController.update);
 
 // PATCH /api/matches/:id/result - Register match result (authenticated, organizer only)
 router.patch('/:id/result', authenticate, authorize(['organizador', 'administrador']), resultsController.registerResult);

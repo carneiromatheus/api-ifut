@@ -14,7 +14,6 @@ router.get('/:id', championshipsController.getById);
 router.post('/', authenticate, authorize(['organizador', 'administrador']), championshipsController.create);
 router.put('/:id', authenticate, championshipsController.update);
 router.post('/:id/start', authenticate, championshipsController.start);
-router.patch('/:id/toggle-registrations', authenticate, championshipsController.toggleRegistrations);
 router.delete('/:id', authenticate, championshipsController.remove);
 
 // GET /api/championships/:id/matches - List matches (public)

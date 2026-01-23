@@ -12,10 +12,6 @@ export const create = async (campeonatoId: number, timeId: number, userId: numbe
     throw new AppError('Campeonato não encontrado', 404, 'CHAMPIONSHIP_NOT_FOUND');
   }
 
-  if (!championship.inscricoesAbertas) {
-    throw new AppError('Campeonato não está aberto para inscrições', 400, 'CHAMPIONSHIP_NOT_OPEN');
-  }
-
   // Check if team exists and user is the creator
   const team = await prisma.time.findUnique({
     where: { id: timeId },

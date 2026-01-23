@@ -273,7 +273,7 @@ export const getTeamHistory = async (timeId: number, limit: number = 10, offset:
 
     return {
       partidaId: match.id,
-      data: match.dataHora.toISOString().split('T')[0],
+      data: match.dataHora ? match.dataHora.toISOString().split('T')[0] : 'A definir',
       campeonato: match.campeonato.nome,
       adversario: adversario.nome,
       placarTime,
@@ -342,7 +342,7 @@ export const getHeadToHead = async (timeId1: number, timeId2: number) => {
     const placarTime2 = team1IsHome ? match.golsTimeVisitante : match.golsTimeCasa;
 
     return {
-      data: match.dataHora.toISOString().split('T')[0],
+      data: match.dataHora ? match.dataHora.toISOString().split('T')[0] : 'A definir',
       campeonato: match.campeonato.nome,
       placarTime1,
       placarTime2,

@@ -32,10 +32,6 @@ export const create = async (data: CreateRegistrationData, userId: number) => {
     throw new Error('Campeonato não encontrado');
   }
 
-  if (!championship.inscricoesAbertas) {
-    throw new Error('Inscrições fechadas para este campeonato');
-  }
-
   const team = await prisma.time.findUnique({ where: { id: timeId } });
   if (!team) {
     throw new Error('Time não encontrado');

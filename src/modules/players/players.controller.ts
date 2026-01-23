@@ -5,8 +5,11 @@ import { AuthRequest } from '../../middlewares/authenticate';
 
 export const list = async (req: Request, res: Response) => {
   try {
-    const { timeId } = req.query;
-    const players = await playersService.list(timeId ? parseInt(timeId as string) : undefined);
+    const { timeId, teamId } = req.query;
+    const resolvedId = timeId ?? teamId; // Accept both query param names
+    const parsedId = resolvedId ? parseInt(resolvedId as string) : undefined;
+
+    const players = await playersService.list(Number.isNaN(parsedId) ? undefined : parsedId);
     return successResponse(res, players);
   } catch (error: any) {
     return errorResponse(res, error.message);

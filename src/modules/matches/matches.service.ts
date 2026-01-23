@@ -179,3 +179,53 @@ export const getById = async (id: number) => {
 
   return match;
 };
+
+interface UpdateMatchData {
+  dataHora?: Date;
+  local?: string;
+}
+
+export const updateMatch = async (id: number, data: UpdateMatchData, userId: number) => {
+  const match = await prisma.partida.findUnique({
+    where: { id },
+    include: {
+      campeonato: {
+        select: { organizadorId: true }
+      }
+    }
+  });
+
+  if (!match) {
+    throw new Error('Partida não encontrada');
+  }
+
+  // Only organizer can update match details
+  if (match.campeonato.organizadorId !== userId) {
+    throw new Error('Apenas o organizador do campeonato pode atualizar a partida');
+  }
+
+  // Can't update finished matches
+  if (match.status === 'finalizada') {
+    throw new Error('Não é possível atualizar partidas finalizadas');
+  }
+
+  const updateData: any = {};
+  
+  if (data.dataHora) {
+    updateData.dataHora = new Date(data.dataHora);
+  }
+  
+  if (data.local !== undefined) {
+    updateData.local = data.local;
+  }
+
+  return prisma.partida.update({
+    where: { id },
+    data: updateData,
+    include: {
+      timeCasa: { select: { id: true, nome: true } },
+      timeVisitante: { select: { id: true, nome: true } },
+      campeonato: { select: { id: true, nome: true } }
+    }
+  });
+};
