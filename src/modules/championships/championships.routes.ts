@@ -22,6 +22,9 @@ router.get('/:id/matches', matchesController.listByChampionship);
 // GET /api/championships/:id/standings - Get standings (public)
 router.get('/:id/standings', standingsController.getStandings);
 
+// GET /api/championships/:id/statistics - Get all statistics (public)
+router.get('/:id/statistics', statisticsController.getChampionshipStatistics);
+
 // GET /api/championships/:id/top-scorers - Get top scorers (public)
 router.get('/:id/top-scorers', statisticsController.getTopScorers);
 

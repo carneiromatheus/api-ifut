@@ -14,6 +14,21 @@ export const getTopScorers = async (req: Request, res: Response) => {
   }
 };
 
+export const getChampionshipStatistics = async (req: Request, res: Response) => {
+  try {
+    const campeonatoId = parseInt(req.params.id);
+    
+    if (isNaN(campeonatoId)) {
+      return errorResponse(res, 'ID do campeonato inválido', 400);
+    }
+    
+    const stats = await statisticsService.getChampionshipStatistics(campeonatoId);
+    return successResponse(res, { estatisticas: stats });
+  } catch (error: any) {
+    return errorResponse(res, error.message);
+  }
+};
+
 export const getPlayerStats = async (req: Request, res: Response) => {
   try {
     const jogadorId = parseInt(req.params.jogadorId);

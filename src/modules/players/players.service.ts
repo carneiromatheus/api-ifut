@@ -120,3 +120,46 @@ export const remove = async (id: number, userId: number) => {
     data: { ativo: false }
   });
 };
+/**
+ * Get all players with their aggregated statistics
+ * Includes total goals and assists across all championships
+ */
+export const listWithStats = async (timeId?: number) => {
+  const players = await prisma.jogador.findMany({
+    where: timeId ? { timeId, ativo: true } : { ativo: true },
+    include: {
+      time: {
+        select: { id: true, nome: true }
+      }
+    }
+  });
+
+  // For each player, aggregate their statistics
+  const playersWithStats = await Promise.all(
+    players.map(async (player) => {
+      const stats = await prisma.estatistica.aggregate({
+        where: { jogadorId: player.id },
+        _sum: {
+          gols: true,
+          assistencias: true,
+          cartoesAmarelos: true,
+          cartoesVermelhos: true
+        },
+        _count: {
+          partidaId: true
+        }
+      });
+
+      return {
+        ...player,
+        gols: stats._sum.gols || 0,
+        assistencias: stats._sum.assistencias || 0,
+        cartoesAmarelos: stats._sum.cartoesAmarelos || 0,
+        cartoesVermelhos: stats._sum.cartoesVermelhos || 0,
+        jogosTotal: stats._count.partidaId
+      };
+    })
+  );
+
+  return playersWithStats;
+};

@@ -6,6 +6,7 @@ import { authenticate } from '../../middlewares/authenticate';
 const router = Router();
 
 router.get('/', playersController.list);
+router.get('/stats', playersController.listWithStats);
 router.get('/:id', playersController.getById);
 router.get('/:id/stats', statisticsController.getPlayerFullStats);
 router.post('/', authenticate, playersController.create);

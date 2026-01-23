@@ -16,6 +16,19 @@ export const list = async (req: Request, res: Response) => {
   }
 };
 
+export const listWithStats = async (req: Request, res: Response) => {
+  try {
+    const { timeId, teamId } = req.query;
+    const resolvedId = timeId ?? teamId; // Accept both query param names
+    const parsedId = resolvedId ? parseInt(resolvedId as string) : undefined;
+
+    const players = await playersService.listWithStats(Number.isNaN(parsedId) ? undefined : parsedId);
+    return successResponse(res, players);
+  } catch (error: any) {
+    return errorResponse(res, error.message);
+  }
+};
+
 export const getById = async (req: Request, res: Response) => {
   try {
     const player = await playersService.getById(parseInt(req.params.id));

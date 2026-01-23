@@ -191,6 +191,77 @@ export const getPlayerFullStats = async (jogadorId: number) => {
 };
 
 /**
+ * Get all championship statistics aggregated by player
+ * GET /api/championships/:id/statistics
+ */
+export const getChampionshipStatistics = async (campeonatoId: number) => {
+  // Get all matches from this championship
+  const matches = await prisma.partida.findMany({
+    where: {
+      campeonatoId,
+      status: 'finalizada'
+    },
+    select: { id: true }
+  });
+
+  if (matches.length === 0) {
+    return [];
+  }
+
+  const matchIds = matches.map(m => m.id);
+
+  // Aggregate statistics by player
+  const stats = await prisma.estatistica.groupBy({
+    by: ['jogadorId'],
+    where: {
+      partidaId: { in: matchIds }
+    },
+    _sum: {
+      gols: true,
+      assistencias: true,
+      cartoesAmarelos: true,
+      cartoesVermelhos: true
+    },
+    _count: {
+      partidaId: true
+    },
+    orderBy: {
+      _sum: {
+        gols: 'desc'
+      }
+    }
+  });
+
+  // Get player details
+  const playersWithStats = await Promise.all(
+    stats.map(async (stat) => {
+      const player = await prisma.jogador.findUnique({
+        where: { id: stat.jogadorId },
+        include: {
+          time: {
+            select: { id: true, nome: true }
+          }
+        }
+      });
+
+      return {
+        jogadorId: stat.jogadorId,
+        nomeJogador: player?.nome || 'Desconhecido',
+        timeId: player?.timeId || 0,
+        nomeTime: player?.time?.nome || 'Desconhecido',
+        gols: stat._sum.gols || 0,
+        assistencias: stat._sum.assistencias || 0,
+        cartoesAmarelos: stat._sum.cartoesAmarelos || 0,
+        cartoesVermelhos: stat._sum.cartoesVermelhos || 0,
+        jogos: stat._count.partidaId
+      };
+    })
+  );
+
+  return playersWithStats;
+};
+
+/**
  * Get team match history with pagination
  * GET /api/teams/:id/history
  */
